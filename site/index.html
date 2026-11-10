@@ -40,7 +40,7 @@
   </section>
 
   <h2>What happens to your token</h2>
-  <p>It's kept as an encrypted secret in your own Worker, and used only to install new releases once a day. It passes through <a href="https://github.com/diva-ravioli/spotify-azuracast/blob/main/relay/worker.ts" target="_blank" rel="noopener noreferrer">a small relay</a> on its way to Cloudflare, because a web page can't call Cloudflare's API directly. The relay keeps and logs nothing, and passes on only what this page asks. The token can change any Worker on your account. To stop updates, delete it on Cloudflare's API tokens page.</p>
+  <p>It's kept as an encrypted secret in your own Worker, and used only to install new releases: once a day, or when you choose Update now. It passes through <a href="https://github.com/diva-ravioli/spotify-azuracast/blob/main/relay/worker.ts" target="_blank" rel="noopener noreferrer">a small relay</a> on its way to Cloudflare, because a web page can't call Cloudflare's API directly. The relay keeps and logs nothing, and passes on only what this page asks. The token can change any Worker on your account. To stop updates, delete it on Cloudflare's API tokens page.</p>
 </main>
 <script type="module" src="page.js"></script>
 </body>

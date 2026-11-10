@@ -12,7 +12,7 @@ Publishes what someone plays on Spotify, and their queue, in the API format Azur
 | `src/app.ts` | Every route, on Web-standard `Request` and `Response`: setup, sign-in, the API, and keys. |
 | `src/ui/pages.ts` | The pages. |
 | `src/cloudflare/worker.ts` | The host: a Durable Object. It only supplies storage and requests. |
-| `src/cloudflare/self-update.ts` | What a deployed Worker runs each day to install a newer release over itself. |
+| `src/cloudflare/self-update.ts` | What a deployed Worker runs each day, or when its owner clicks Update now, to install a newer release over itself. |
 | `site/` | The install page, on GitHub Pages: uploads the Worker to someone's Cloudflare account from their browser. |
 | `relay/` | The install page's way to Cloudflare's API, its own small Worker. `relay.yml` deploys it from `main`. |
 | `scripts/build-release.mjs` | Builds the two files a release publishes: `worker.js` and `worker.json`. |

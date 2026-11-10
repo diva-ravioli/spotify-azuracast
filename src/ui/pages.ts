@@ -203,8 +203,10 @@ function ago(ms: number, now: number): string {
 
 function updateAdvice(view: DashboardView): string {
   if (!view.update) return ''
-  const instructions = `It installs itself within a day. If this message stays, check that the API token you gave it still exists on Cloudflare's API tokens page.`
-  return notice('warn', `<b>Version ${escapeHtml(view.update)} is out.</b> ${instructions}`)
+  return notice(
+    'warn',
+    `<b>Version ${escapeHtml(view.update)} is out.</b> It installs itself within a day, or now. <form method="post" action="/update"><button>Update now</button></form>`
+  )
 }
 
 function keyList(view: DashboardView): string {
@@ -275,6 +277,8 @@ ${apiSection(view)}
   <h2>This install</h2>
   <p class="soft">Spotify's authorization runs until <b>${when(view.expiresAt)}</b>, when the API stops saying what you play. It's worth a reminder in your calendar: renewing takes one click, here.</p>
   <form method="post" action="/signin"><button class="quiet">Renew now</button></form>
+  <p class="soft">This is version <b>${VERSION}</b>. It installs new versions by itself, once a day.</p>
+  <form method="post" action="/update/check"><button class="quiet">Check for updates</button></form>
   <div class="row">
     <form class="inline" method="post" action="/signout"><button class="quiet">Sign out</button></form>
     <form class="inline" method="post" action="/reset" data-confirm="Forget your Spotify connection and every API key? You will set this up from the start."><button class="quiet">Forget everything</button></form>

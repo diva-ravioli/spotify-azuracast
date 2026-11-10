@@ -43,6 +43,7 @@ export class Adapter {
     const test = env.TEST_SPOTIFY
     this.app = new App({
       store,
+      update: () => selfUpdate(env),
       ...(env.PUBLIC_URL ? { publicUrl: env.PUBLIC_URL } : {}),
       ...(test
         ? { spotify: { accounts: test, api: test } }

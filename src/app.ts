@@ -50,6 +50,8 @@ export interface AppOptions {
   now?: () => number
   spotify?: SpotifyEndpoints
   tracker?: TrackerOptions
+  /** Installs the latest release over this copy, where the host can. It throws an error named for the step that failed. */
+  update?: () => Promise<'no-token' | 'up-to-date' | 'updated'>
 }
 
 /** A reading this fresh is good enough: clients poll every few seconds, and share it. */
@@ -85,6 +87,8 @@ export function isRoute(pathname: string): boolean {
     pathname === '/spotify/callback' ||
     pathname === '/keys' ||
     pathname.startsWith('/keys/') ||
+    pathname === '/update' ||
+    pathname === '/update/check' ||
     isApiPath(pathname)
   )
 }
@@ -153,6 +157,32 @@ export function compareVersions(a: string, b: string): number {
 
 const NOTICES: Record<string, { kind: 'good' | 'bad' | 'warn'; text: string }> = {
   renewed: { kind: 'good', text: "Spotify's authorization is renewed for six months." },
+  current: { kind: 'good', text: 'This is the latest version.' },
+  updating: {
+    kind: 'good',
+    text: 'The new version is installed, and takes over within a minute. Reload this page then.',
+  },
+  'check-failed': {
+    kind: 'warn',
+    text: "GitHub didn't answer, so there is no telling whether there is a new version. Try again later.",
+  },
+  'update-failed': { kind: 'warn', text: "The new version couldn't be downloaded. Try again later." },
+  'update-refused': {
+    kind: 'bad',
+    text: "Cloudflare refused the new version. Check on Cloudflare's API tokens page that the token this copy was installed with still exists, with Workers Scripts: Edit.",
+  },
+  'cannot-update': {
+    kind: 'warn',
+    text: "This copy can't update itself: it wasn't installed with a Cloudflare API token.",
+  },
+}
+
+/** What the dashboard says when updating failed, by the step that failed. */
+const UPDATE_FAILURES: Record<string, string> = {
+  ReleaseCheckFailed: 'check-failed',
+  ReleaseUnavailable: 'update-failed',
+  ReleaseMismatch: 'update-failed',
+  UploadRefused: 'update-refused',
 }
 
 export class App {
@@ -162,6 +192,7 @@ export class App {
   private readonly now: () => number
   private readonly spotify: SpotifyEndpoints
   private readonly trackerOptions: TrackerOptions
+  private readonly update: AppOptions['update']
 
   private state: State | null = null
   private savedTracker = ''
@@ -179,6 +210,7 @@ export class App {
     this.now = options.now ?? Date.now
     this.spotify = options.spotify ?? SPOTIFY
     this.trackerOptions = options.tracker ?? DEFAULT_OPTIONS
+    this.update = options.update
   }
 
   // ─── State ───────────────────────────────────────────────────────────────
@@ -260,6 +292,8 @@ export class App {
     if (pathname === '/keys' && method === 'POST') return this.makeKey(request, origin)
     const removal = /^\/keys\/([0-9a-f]+)\/remove$/.exec(pathname)
     if (removal && method === 'POST') return this.removeKey(removal[1]!)
+    if (pathname === '/update/check' && method === 'POST') return this.checkForUpdate()
+    if (pathname === '/update' && method === 'POST') return this.updateNow()
     return new Response('Not found.', { status: 404 })
   }
 
@@ -750,32 +784,63 @@ export class App {
   /** The latest release, if it is newer. Asked at most once a day, and only when someone is looking. */
   private async availableUpdate(): Promise<string | undefined> {
     const state = await this.load()
-    const now = this.now()
-    if (!state.update || now - state.update.checkedAt > UPDATE_CHECK_EVERY_MS) {
-      state.update = { checkedAt: now, ...(state.update?.latest ? { latest: state.update.latest } : {}) }
-      try {
-        const response = await this.fetch(
-          `https://api.github.com/repos/${REPOSITORY}/releases/latest`,
-          {
-            headers: { Accept: 'application/vnd.github+json', 'User-Agent': CLIENT },
-            signal: AbortSignal.timeout(1_500),
-          }
-        )
-        if (response.ok) {
-          const release = (await response.json()) as { tag_name?: unknown }
-          if (typeof release.tag_name === 'string') {
-            state.update.latest = release.tag_name.replace(/^v/, '')
-          }
-        } else {
-          await response.body?.cancel()
-        }
-      } catch {
-        // Nothing depends on this. Ask again tomorrow.
-      }
-      await this.save()
+    if (!state.update || this.now() - state.update.checkedAt > UPDATE_CHECK_EVERY_MS) {
+      await this.askForRelease()
     }
-    const latest = state.update.latest
+    const latest = state.update?.latest
     return latest && compareVersions(latest, VERSION) > 0 ? latest : undefined
+  }
+
+  /** Asks GitHub for the latest release, and keeps the answer. Answers whether GitHub did. */
+  private async askForRelease(): Promise<boolean> {
+    const state = await this.load()
+    const update: NonNullable<State['update']> = {
+      checkedAt: this.now(),
+      ...(state.update?.latest ? { latest: state.update.latest } : {}),
+    }
+    state.update = update
+    let answered = false
+    try {
+      const response = await this.fetch(`https://api.github.com/repos/${REPOSITORY}/releases/latest`, {
+        headers: { Accept: 'application/vnd.github+json', 'User-Agent': CLIENT },
+        signal: AbortSignal.timeout(1_500),
+      })
+      if (response.ok) {
+        const release = (await response.json()) as { tag_name?: unknown }
+        if (typeof release.tag_name === 'string') {
+          update.latest = release.tag_name.replace(/^v/, '')
+          answered = true
+        }
+      } else {
+        await response.body?.cancel()
+      }
+    } catch {
+      // Nothing depends on this. Ask again tomorrow.
+    }
+    await this.save()
+    return answered
+  }
+
+  /** The dashboard's "Check for updates": asks now, however recently it last did. */
+  private async checkForUpdate() {
+    if (!(await this.askForRelease())) return this.redirect('/?notice=check-failed')
+    // A newer version shows on the dashboard, with a button to install it.
+    return this.redirect((await this.availableUpdate()) ? '/' : '/?notice=current')
+  }
+
+  /** The dashboard's "Update now": what the daily update does, straight away. */
+  private async updateNow() {
+    if (!this.update) return this.redirect('/?notice=cannot-update')
+    let outcome: Awaited<ReturnType<NonNullable<AppOptions['update']>>>
+    try {
+      outcome = await this.update()
+    } catch (error) {
+      // Only the step's name: an error's text could hold a secret.
+      const notice = UPDATE_FAILURES[(error as Error)?.name] ?? 'update-failed'
+      return this.redirect(`/?notice=${notice}`)
+    }
+    const notice = { updated: 'updating', 'up-to-date': 'current', 'no-token': 'cannot-update' }[outcome]
+    return this.redirect(`/?notice=${notice}`)
   }
 
   // ─── API keys ────────────────────────────────────────────────────────────

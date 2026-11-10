@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+The dashboard says which version this is, and can check for a new one and install it straight away, instead of waiting for the daily update. If updating fails, it says why.
+
 ## 0.1.2
 
 Keys have a section of their own on the dashboard, which says a key is needed to read the API, and when there is none yet.

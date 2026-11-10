@@ -20,7 +20,8 @@ import {
   setup,
   track,
 } from './helpers/fakes.ts'
-import { App } from '../src/app.ts'
+import { App, type AppOptions } from '../src/app.ts'
+import { VERSION } from '../src/version.ts'
 import { appName } from '../src/ui/pages.ts'
 
 // ─── Setting up ──────────────────────────────────────────────────────────────
@@ -801,7 +802,8 @@ test('when a key was last used shows on the dashboard, without a write on every 
 
 // ─── The update notice ───────────────────────────────────────────────────────
 
-function withRelease(tag: string) {
+function withRelease(tag: string | null, update?: AppOptions['update']) {
+  let latest = tag
   const spotify = new FakeSpotify()
   let asked = 0
   const external = fakeFetch({
@@ -809,7 +811,7 @@ function withRelease(tag: string) {
     [API]: spotify.handle,
     'https://api.github.com': async () => {
       asked += 1
-      return json({ tag_name: tag })
+      return latest ? json({ tag_name: latest }) : new Response('rate limited', { status: 403 })
     },
   })
   const clock = new Clock()
@@ -818,9 +820,26 @@ function withRelease(tag: string) {
     now: clock.now,
     fetch: external,
     spotify: { accounts: ACCOUNTS, api: API },
+    ...(update ? { update } : {}),
   })
-  return { browser: new Browser(app, external), clock, asked: () => asked }
+  const release = (tag: string) => {
+    latest = tag
+  }
+  return { app, external, browser: new Browser(app, external), clock, asked: () => asked, release }
 }
+
+/** A page as its reader sees it: apostrophes come escaped. */
+const read = async (answer: Response) => (await answer.text()).replaceAll('&#39;', "'")
+
+/** Signed in, as the owner, with releases up to `tag` on GitHub. */
+async function ownerWithRelease(tag: string | null, update?: AppOptions['update']) {
+  const context = withRelease(tag, update)
+  await context.browser.follow(await context.browser.post('/setup', { client_id: CLIENT_ID }))
+  return context
+}
+
+const named = (name: string, message = 'Bearer cf-token-that-must-stay-secret') =>
+  Object.assign(new Error(message), { name })
 
 test('a newer release is mentioned, and looked for at most once a day', async () => {
   const { browser, clock, asked } = withRelease('v9.0.0')
@@ -860,4 +879,78 @@ test('the update check failing changes nothing', async () => {
 test('unknown paths and methods are not found, signed in or not', async () => {
   const { browser } = await connected()
   assert.equal((await browser.post('/keys/nothing/remove')).status, 404)
+})
+
+test('“Check for updates” asks GitHub straight away, and says when this is the latest', async () => {
+  const { browser, asked } = await ownerWithRelease('v0.1.0')
+  const before = asked()
+  const page = await read(await browser.follow(await browser.post('/update/check')))
+  assert.equal(asked(), before + 1, 'however recently it last asked')
+  assert.match(page, /This is the latest version/)
+  assert.match(page, new RegExp(`This is version <b>${VERSION.replaceAll('.', '\\.')}</b>`))
+})
+
+test('a version that came out since the last look shows on checking, with a button to install it', async () => {
+  const { browser, release } = await ownerWithRelease('v0.1.0')
+  release('v9.0.0')
+  assert.doesNotMatch(await read(await browser.get('/')), /is out/, 'not until a day has passed, or someone checks')
+  const page = await read(await browser.follow(await browser.post('/update/check')))
+  assert.match(page, /Version 9\.0\.0 is out/)
+  assert.match(page, /<form method="post" action="\/update"><button>Update now<\/button>/)
+})
+
+test('GitHub not answering a check is said, and not taken for “up to date”', async () => {
+  const { browser } = await ownerWithRelease(null)
+  const page = await read(await browser.follow(await browser.post('/update/check')))
+  assert.match(page, /GitHub didn't answer/)
+  assert.doesNotMatch(page, /latest version/)
+})
+
+test('“Update now” installs the new version, and says so', async () => {
+  let updates = 0
+  const { browser } = await ownerWithRelease('v9.0.0', async () => {
+    updates += 1
+    return 'updated'
+  })
+  const page = await read(await browser.follow(await browser.post('/update')))
+  assert.equal(updates, 1)
+  assert.match(page, /new version is installed, and takes over within a minute/)
+})
+
+test('“Update now” says plainly why it couldn’t, and never an error’s text', async () => {
+  const cases: [NonNullable<AppOptions['update']>, RegExp][] = [
+    [async () => 'up-to-date', /This is the latest version/],
+    [async () => 'no-token', /wasn't installed with a Cloudflare API token/],
+    [async () => { throw named('UploadRefused') }, /Cloudflare refused the new version.*Workers Scripts: Edit/],
+    [async () => { throw named('ReleaseCheckFailed') }, /GitHub didn't answer/],
+    [async () => { throw named('ReleaseUnavailable') }, /couldn't be downloaded/],
+    [async () => { throw named('ReleaseMismatch') }, /couldn't be downloaded/],
+    [async () => { throw new TypeError('Bearer cf-token-that-must-stay-secret') }, /couldn't be downloaded/],
+  ]
+  for (const [update, expected] of cases) {
+    const { browser } = await ownerWithRelease('v9.0.0', update)
+    const page = await read(await browser.follow(await browser.post('/update')))
+    assert.match(page, expected, String(expected))
+    assert.doesNotMatch(page, /cf-token-that-must-stay-secret/)
+  }
+  const { browser } = await ownerWithRelease('v9.0.0')
+  assert.match(await read(await browser.follow(await browser.post('/update'))), /can't update itself/)
+})
+
+test('only the owner can update or check, and only from these pages', async () => {
+  let updates = 0
+  const { app, external, browser, asked } = await ownerWithRelease('v9.0.0', async () => {
+    updates += 1
+    return 'updated'
+  })
+  const before = asked()
+  const stranger = new Browser(app, external)
+  for (const path of ['/update', '/update/check']) {
+    const answer = await stranger.post(path)
+    assert.equal(answer.status, 303, path)
+    assert.equal(answer.headers.get('location'), '/', path)
+    assert.equal((await browser.post(path, {}, 'https://evil.example')).status, 403, path)
+  }
+  assert.equal(updates, 0)
+  assert.equal(asked(), before)
 })
