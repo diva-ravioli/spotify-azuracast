@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+Keys have a section of their own on the dashboard, which says a key is needed to read the API, and when there is none yet.
+
 ## 0.1.1
 
 The install page suggests a made-up Worker name, and setup names the Spotify app after it, so nothing given to Spotify names this project. The install page follows Cloudflare's new token form.

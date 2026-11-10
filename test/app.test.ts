@@ -56,6 +56,14 @@ test('setup asks for a Client ID alone, and PKCE does the rest', async () => {
   assert.ok(stored.spotify.refreshToken)
 })
 
+test('the dashboard says a key is needed, and that there is none yet', async () => {
+  const { browser } = await connected()
+  const page = await (await browser.get('/')).text()
+  assert.match(page, /<h2>Keys<\/h2>/)
+  assert.match(page, /No keys yet<\/b>, so nothing can read the API/)
+  assert.match(page, /Where will you use it\?/)
+})
+
 test('a Client ID that cannot be one is said so, and nothing is started', async () => {
   const { browser, spotify } = setup()
   const answer = await browser.post('/setup', { client_id: 'nonsense' })

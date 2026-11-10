@@ -221,16 +221,21 @@ function keyList(view: DashboardView): string {
 function apiSection(view: DashboardView): string {
   return `<section class="card">
   <h2>API</h2>
-  <p class="soft">What you play, in the format AzuraCast stations publish. Every request needs a key, sent as <code>Authorization: Bearer</code>.</p>
+  <p class="soft">What you play, in the format AzuraCast stations publish. Every request needs a key, sent as <code>Authorization: Bearer</code> followed by the key. Make one under Keys, below.</p>
   <ol class="fields">
     <li><b>Now playing</b>${copyable(view.endpoints.nowPlaying)}</li>
     <li><b>Queue</b>${copyable(view.endpoints.queue)}</li>
   </ol>
   <p class="soft">The station is <code>spotify</code>, or <code>${view.endpoints.stationId}</code>, wherever AzuraCast takes a station.</p>
-  ${keyList(view)}
+</section>
+<section class="card">
+  <h2>Keys</h2>
+  <p class="soft">Anything that reads the API, such as your website, an overlay or a bot, needs a key. Make one for each, so you can stop one without the others.</p>
+  ${view.keys.length === 0 ? '<p class="soft"><b>No keys yet</b>, so nothing can read the API.</p>' : keyList(view)}
   <form method="post" action="/keys">
-    <label for="label">Make a key, named for your own reference</label>
+    <label for="label">Where will you use it?</label>
     <input type="text" id="label" name="label" required maxlength="60" placeholder="My website">
+    <p class="soft">Only you see this, to tell your keys apart.</p>
     <div class="row"><button>Make a key</button></div>
   </form>
 </section>`
