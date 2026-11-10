@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.2
 
 Keys have a section of their own on the dashboard, which says a key is needed to read the API, and when there is none yet.
 
