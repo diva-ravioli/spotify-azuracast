@@ -125,14 +125,50 @@ const notice = (kind: 'warn' | 'bad' | 'good', html: string) =>
 /**
  * What the Spotify app is called: this copy's own name, the first part of its
  * workers.dev address, or the whole of any other, which Spotify has anyway.
- * Neither it nor the description names this project, so Spotify can't simply
- * count the people who use it.
+ * Neither it nor the description names this project, and neither is the same
+ * for everyone, so Spotify can't simply count the people who use it.
  */
 export function appName(redirectUri: string): string {
   const { hostname } = new URL(redirectUri)
   return hostname.endsWith('.workers.dev') ? hostname.split('.')[0]! : hostname
 }
-export const APP_DESCRIPTION = 'What I am listening to'
+
+const WHAT = [
+  'What I am listening to',
+  'What I am playing',
+  'My current song',
+  'The song I have on',
+  'What is playing for me',
+  'My music right now',
+  'Now playing',
+  'The track I am on',
+]
+const WHERE = [
+  'for my website',
+  'on my site',
+  'for my stream',
+  'for my homepage',
+  'on my page',
+  'for friends',
+  'for my blog',
+  'for a small widget',
+]
+
+/** FNV-1a: enough to spread names over a handful of choices. */
+function hashOf(text: string): number {
+  let hash = 0x811c9dc5
+  for (const char of text) hash = Math.imul(hash ^ char.charCodeAt(0), 0x01000193) >>> 0
+  return hash
+}
+
+/**
+ * A description in ordinary words, picked by this copy's name: the same every
+ * time this copy is set up, and seldom the same as another's.
+ */
+export function appDescription(redirectUri: string): string {
+  const hash = hashOf(appName(redirectUri))
+  return `${WHAT[hash % WHAT.length]} ${WHERE[Math.floor(hash / WHAT.length) % WHERE.length]}`
+}
 
 export function setupPage(redirectUri: string, error?: string): Page {
   return {
@@ -146,7 +182,7 @@ ${error ? notice('bad', escapeHtml(error)) : ''}
   <p><a class="button" href="https://developer.spotify.com/dashboard/create" target="_blank" rel="noopener noreferrer">Open Spotify's form</a></p>
   <ol class="fields">
     <li><b>App name</b>${copyable(appName(redirectUri))}</li>
-    <li><b>App description</b>${copyable(APP_DESCRIPTION)}</li>
+    <li><b>App description</b>${copyable(appDescription(redirectUri))}</li>
     <li><b>Redirect URI</b>: paste this, then click Add.${copyable(redirectUri)}</li>
     <li><b>Which API/SDKs are you planning to use?</b> Tick <b>Web API</b>, accept the terms and save.</li>
   </ol>

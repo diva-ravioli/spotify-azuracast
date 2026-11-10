@@ -23,7 +23,7 @@ import {
 } from './helpers/fakes.ts'
 import { App, type AppOptions } from '../src/app.ts'
 import { VERSION } from '../src/version.ts'
-import { appName } from '../src/ui/pages.ts'
+import { appDescription, appName } from '../src/ui/pages.ts'
 
 // ─── Setting up ──────────────────────────────────────────────────────────────
 
@@ -43,6 +43,20 @@ test('what goes to Spotify is named after this copy, never after the project', a
   assert.equal(given.length, 3)
   for (const value of given) assert.doesNotMatch(value, /azuracast/i, value)
   assert.equal(appName('https://lively-harbor-b542.me.workers.dev/spotify/callback'), 'lively-harbor-b542', 'on workers.dev, its Worker name')
+})
+
+test('the app description is ordinary words, the same for a copy each time, and seldom another copy’s', async () => {
+  // @ts-expect-error: a plain script for browsers, with no types.
+  const { suggestName } = await import('../site/install.js')
+  const uri = (name: string) => `https://${name}.me.workers.dev/spotify/callback`
+  const names: string[] = Array.from({ length: 300 }, () => suggestName())
+  const descriptions = names.map((name) => appDescription(uri(name)))
+  for (const description of descriptions) assert.doesNotMatch(description, /spotify|azuracast/i, description)
+  assert.ok(new Set(descriptions).size >= 40, `only ${new Set(descriptions).size} different descriptions`)
+  assert.equal(appDescription(uri(names[0]!)), descriptions[0], 'the same copy, the same description')
+  const { browser } = setup()
+  const page = await (await browser.get('/')).text()
+  assert.match(page, new RegExp(`<div class="value">${appDescription('https://adapter.fake.test/spotify/callback')}</div>`))
 })
 
 test('setup asks for a Client ID alone, and PKCE does the rest', async () => {
