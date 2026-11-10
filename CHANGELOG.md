@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.3
 
 The dashboard says which version this is, and can check for a new one and install it straight away, instead of waiting for the daily update. If updating fails, it says why.
 

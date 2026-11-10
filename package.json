@@ -1,6 +1,6 @@
 {
   "name": "spotify-azuracast",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "private": true,
   "description": "A self-hosted adapter that publishes what you play on Spotify, and your queue, in the API format AzuraCast stations use.",
   "license": "0BSD",
