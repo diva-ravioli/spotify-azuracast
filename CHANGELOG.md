@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.5
 
 The Spotify app's suggested description differs from copy to copy, like its name, and stays the same for any one copy.
 
