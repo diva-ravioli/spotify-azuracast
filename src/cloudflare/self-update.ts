@@ -8,7 +8,8 @@
  * backwards.
  */
 import { compareVersions } from '../app.ts'
-import { CLIENT, REPOSITORY, VERSION } from '../version.ts'
+import { RELEASES, failure, latestRelease } from '../releases.ts'
+import { CLIENT, VERSION } from '../version.ts'
 
 export interface UpdateEnv {
   CF_API_TOKEN?: string
@@ -18,14 +19,6 @@ export interface UpdateEnv {
 }
 
 const REQUEST_TIMEOUT_MS = 30_000
-const headers = { 'User-Agent': CLIENT }
-
-/** Named, as an error's name is all that may be logged: its text could hold a secret. */
-function failure(name: string): Error {
-  const error = new Error(name)
-  error.name = name
-  return error
-}
 
 /** Answers what it did. Throws, naming the step, if a newer release couldn't be installed. */
 export async function selfUpdate(
@@ -36,41 +29,31 @@ export async function selfUpdate(
   const { CF_API_TOKEN: token, CF_ACCOUNT_ID: account, WORKER_NAME: name } = env
   if (!token || !account || !name) return 'no-token'
 
-  const answer = await fetcher(`https://api.github.com/repos/${REPOSITORY}/releases/latest`, {
-    headers: { ...headers, Accept: 'application/vnd.github+json' },
-    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
-  })
   // No releases yet is not a failure.
-  if (answer.status === 404) return 'up-to-date'
-  if (!answer.ok) throw failure('ReleaseCheckFailed')
-  const { tag_name: tag } = (await answer.json()) as { tag_name?: unknown }
-  const latest = /^v(\d+\.\d+\.\d+)$/.exec(String(tag))?.[1]
-  if (!latest || compareVersions(latest, current) <= 0) return 'up-to-date'
+  const latest = await latestRelease(fetcher, REQUEST_TIMEOUT_MS)
+  if (!latest || compareVersions(latest.version, current) <= 0) return 'up-to-date'
 
-  const asset = (file: string) =>
-    fetcher(`https://github.com/${REPOSITORY}/releases/download/v${latest}/${file}`, {
-      headers,
+  // That very release's code, even if a newer one came out a moment ago.
+  let code: Response
+  try {
+    code = await fetcher(`${RELEASES}/download/v${latest.version}/worker.js`, {
+      headers: { 'User-Agent': CLIENT },
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     })
-  const [code, description] = await Promise.all([asset('worker.js'), asset('worker.json')])
-  if (!code.ok || !description.ok) throw failure('ReleaseUnavailable')
-  const manifest = (await description.json()) as {
-    version?: unknown
-    compatibility_date?: unknown
-    compatibility_flags?: unknown
+  } catch {
+    throw failure('ReleaseUnavailable')
   }
-  if (manifest.version !== latest || typeof manifest.compatibility_date !== 'string') {
-    throw failure('ReleaseMismatch')
+  if (!code.ok) {
+    await code.body?.cancel()
+    throw failure('ReleaseUnavailable', code.status)
   }
 
   // Everything is sent again: an upload replaces the Worker's bindings. There are
   // no migrations, since the Durable Object class never changes.
   const metadata = {
     main_module: 'worker.js',
-    compatibility_date: manifest.compatibility_date,
-    compatibility_flags: Array.isArray(manifest.compatibility_flags)
-      ? manifest.compatibility_flags
-      : [],
+    compatibility_date: latest.compatibility_date,
+    compatibility_flags: latest.compatibility_flags,
     bindings: [
       { type: 'durable_object_namespace', name: 'ADAPTER', class_name: 'Adapter' },
       { type: 'plain_text', name: 'WORKER_NAME', text: name },
@@ -96,6 +79,6 @@ export async function selfUpdate(
     }
   )
   const result = (await upload.json().catch(() => null)) as { success?: unknown } | null
-  if (!upload.ok || result?.success !== true) throw failure('UploadRefused')
+  if (!upload.ok || result?.success !== true) throw failure('UploadRefused', upload.status)
   return 'updated'
 }

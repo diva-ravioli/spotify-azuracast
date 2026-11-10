@@ -72,7 +72,10 @@ export default {
   /** Once a day, on the schedule the install page set. */
   scheduled(_event: unknown, env: Env, context: { waitUntil(work: Promise<unknown>): void }): void {
     context.waitUntil(
-      selfUpdate(env).catch((error) => console.error('Failed updating:', (error as Error)?.name))
+      selfUpdate(env).catch((error: Error & { status?: number }) =>
+        // The step's name and the HTTP status: never an error's text, which could hold a secret.
+        console.error('Failed updating:', error?.name, ...(error?.status ? [error.status] : []))
+      )
     )
   },
 }

@@ -40,7 +40,8 @@ import {
   signInPage,
   type Page,
 } from './ui/pages.ts'
-import { CLIENT, REPOSITORY, VERSION } from './version.ts'
+import { latestRelease } from './releases.ts'
+import { VERSION } from './version.ts'
 
 export interface AppOptions {
   store: Store
@@ -801,19 +802,9 @@ export class App {
     state.update = update
     let answered = false
     try {
-      const response = await this.fetch(`https://api.github.com/repos/${REPOSITORY}/releases/latest`, {
-        headers: { Accept: 'application/vnd.github+json', 'User-Agent': CLIENT },
-        signal: AbortSignal.timeout(1_500),
-      })
-      if (response.ok) {
-        const release = (await response.json()) as { tag_name?: unknown }
-        if (typeof release.tag_name === 'string') {
-          update.latest = release.tag_name.replace(/^v/, '')
-          answered = true
-        }
-      } else {
-        await response.body?.cancel()
-      }
+      const release = await latestRelease(this.fetch, 3_000)
+      if (release) update.latest = release.version
+      answered = true
     } catch {
       // Nothing depends on this. Ask again tomorrow.
     }

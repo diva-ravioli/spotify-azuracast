@@ -14,6 +14,7 @@ import {
   QUEUE,
   json,
   keyed,
+  latestRelease,
   makeKey,
   memoryStore,
   playing,
@@ -809,10 +810,12 @@ function withRelease(tag: string | null, update?: AppOptions['update']) {
   const external = fakeFetch({
     [ACCOUNTS]: spotify.handle,
     [API]: spotify.handle,
-    'https://api.github.com': async () => {
-      asked += 1
-      return latest ? json({ tag_name: latest }) : new Response('rate limited', { status: 403 })
-    },
+    'https://github.com': latestRelease(
+      () => latest?.replace(/^v/, '') ?? null,
+      () => {
+        asked += 1
+      }
+    ),
   })
   const clock = new Clock()
   const app = new App({

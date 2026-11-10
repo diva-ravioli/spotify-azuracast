@@ -253,14 +253,24 @@ export class Browser {
   }
 }
 
+/** github.com, where the newest release is `version`: it sends its worker.json, as GitHub does. */
+export function latestRelease(version: string | (() => string | null), onAsk = () => {}) {
+  return async (request: Request) => {
+    if (!request.url.endsWith('/releases/latest/download/worker.json')) return new Response('Not Found', { status: 404 })
+    onAsk()
+    const latest = typeof version === 'function' ? version() : version
+    if (!latest) return new Response('Too many requests', { status: 429 })
+    return json({ version: latest, compatibility_date: '2026-10-01', compatibility_flags: [] })
+  }
+}
+
 export function setup(options: Partial<AppOptions> = {}) {
   const clock = new Clock()
   const spotify = new FakeSpotify()
-  const github = async () => json({ tag_name: 'v0.1.0' })
   const external = fakeFetch({
     [ACCOUNTS]: spotify.handle,
     [API]: spotify.handle,
-    'https://api.github.com': github,
+    'https://github.com': latestRelease('0.1.0'),
   })
   const store = memoryStore()
   const app = new App({

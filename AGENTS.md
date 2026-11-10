@@ -27,7 +27,7 @@ Publishes what someone plays on Spotify, and their queue, in the API format Azur
 
 **No dependencies at run time.** `package.json` has only `devDependencies`, and a test holds it to that. Node runs `src/` as it is, so TypeScript must stay erasable, with `.ts` in imports.
 
-**Code runs on Workers, and its tests under Node, and they differ.** Use Web APIs. Workers refuse `fetch` with `redirect: 'error'`: use `'manual'` and turn away a 3xx yourself.
+**Code runs on Workers, and its tests under Node, and they differ.** Use Web APIs. Workers refuse `fetch` with `redirect: 'error'`: use `'manual'` and turn away a 3xx yourself. Don't ask GitHub's API anything from a Worker: it allows 60 requests an hour to anyone not signed in, counted by address, and Workers share theirs, so it mostly says no. `src/releases.ts` finds the newest release on github.com instead.
 
 **What is kept stays still between reads.** Spotify's position changes on every read, so the tracker keeps an anchor that moves only on a real jump, and the stored state changes only when something happened. Elapsed and remaining time are worked out from the anchor as each answer is made, never stored.
 
