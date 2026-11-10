@@ -1,6 +1,8 @@
-import { InstallError, install } from './install.js'
+import { InstallError, install, suggestName } from './install.js'
 
 const form = document.querySelector('#install')
+const name = document.querySelector('#name')
+if (!name.value) name.value = suggestName()
 const button = form.querySelector('button')
 const progress = document.querySelector('#progress')
 const problem = document.querySelector('#problem')

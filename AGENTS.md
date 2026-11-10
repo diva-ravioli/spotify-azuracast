@@ -43,6 +43,8 @@ Publishes what someone plays on Spotify, and their queue, in the API format Azur
 
 **A deployed copy.** An update re-uploads the Worker with the bindings in `self-update.ts` and no migrations, so keep the Durable Object class named `Adapter`, and change the bindings there and in `site/install.js` together. The API token can change any Worker on the user's account: it never goes anywhere but Cloudflare, and the install page never replaces a Worker that isn't this adapter.
 
+**Spotify can't count us.** Each user registers their own Spotify app, and what they give Spotify (the app's name and description, and the redirect URI with the Worker's name in it) never names this project, and what is the same for everyone is ordinary words: the install page makes up a Worker name, and setup names the app after it. `test/app.test.ts` and `test/install.test.ts` hold this.
+
 **The relay passes on only what the install page asks.** Every user's Cloudflare token goes through it, so it takes requests only from the install page's origin, only for the requests in `site/install.js`, and keeps and logs nothing. A new request in `install.js` needs adding to `relay/worker.ts` too: `test/relay.test.ts` installs through the relay and fails until it is. It has no bindings and no settings, and `relay.yml` deploys it from `main` alone, so what runs is what is here.
 
 ## The format

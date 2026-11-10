@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { test } from 'node:test'
 // @ts-expect-error: a plain script for browsers, with no types.
-import { InstallError, RELAY, SCHEDULE, install } from '../site/install.js'
+import { InstallError, RELAY, SCHEDULE, install, suggestName, validName } from '../site/install.js'
 
 const TOKEN = 'cf-token-that-must-stay-secret'
 const ACCOUNT = '0123456789abcdef0123456789abcdef'
@@ -130,4 +130,15 @@ test('the Durable Object the page creates is the one the Worker exports', () => 
   const config = JSON.parse(readFileSync(join(import.meta.dirname, '..', 'wrangler.jsonc'), 'utf8'))
   assert.deepEqual(config.migrations, [{ tag: 'v1', new_sqlite_classes: ['Adapter'] }])
   assert.deepEqual(config.durable_objects.bindings, [{ name: 'ADAPTER', class_name: 'Adapter' }])
+})
+
+test('the suggested Worker name is valid, differs each time, and says nothing about what it is', () => {
+  const names = Array.from({ length: 200 }, () => suggestName() as string)
+  for (const name of names) {
+    assert.ok(validName(name), name)
+    assert.doesNotMatch(name, /spotify|azuracast|radio|station|playing/i, name)
+  }
+  assert.ok(new Set(names).size > 190, 'not one name for everyone')
+  const page = readFileSync(join(import.meta.dirname, '..', 'site', 'index.html'), 'utf8')
+  assert.doesNotMatch(page, /id="name"[^>]*value=/, 'no name in the page that every visitor would share')
 })

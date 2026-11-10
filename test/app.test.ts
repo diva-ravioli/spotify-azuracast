@@ -21,6 +21,7 @@ import {
   track,
 } from './helpers/fakes.ts'
 import { App } from '../src/app.ts'
+import { appName } from '../src/ui/pages.ts'
 
 // ─── Setting up ──────────────────────────────────────────────────────────────
 
@@ -30,6 +31,16 @@ test('a fresh install shows its setup, with the redirect URI to paste', async ()
   assert.match(page, /https:\/\/adapter\.fake\.test\/spotify\/callback/)
   assert.match(page, /Premium/)
   assert.doesNotMatch(page, /client secret<\/label>/i)
+})
+
+test('what goes to Spotify is named after this copy, never after the project', async () => {
+  const { browser } = setup()
+  const page = await (await browser.get('/')).text()
+  const given = [...page.matchAll(/<div class="value">([^<]*)<\/div>/g)].map((match) => match[1]!)
+  assert.deepEqual(given.slice(0, 1), ['adapter.fake.test'], 'the app name is its address')
+  assert.equal(given.length, 3)
+  for (const value of given) assert.doesNotMatch(value, /azuracast/i, value)
+  assert.equal(appName('https://lively-harbor-b542.me.workers.dev/spotify/callback'), 'lively-harbor-b542', 'on workers.dev, its Worker name')
 })
 
 test('setup asks for a Client ID alone, and PKCE does the rest', async () => {

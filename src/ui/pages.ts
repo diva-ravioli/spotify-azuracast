@@ -122,6 +122,18 @@ const copyable = (value: string) =>
 const notice = (kind: 'warn' | 'bad' | 'good', html: string) =>
   `<div class="notice ${kind}">${html}</div>`
 
+/**
+ * What the Spotify app is called: this copy's own name, the first part of its
+ * workers.dev address, or the whole of any other, which Spotify has anyway.
+ * Neither it nor the description names this project, so Spotify can't simply
+ * count the people who use it.
+ */
+export function appName(redirectUri: string): string {
+  const { hostname } = new URL(redirectUri)
+  return hostname.endsWith('.workers.dev') ? hostname.split('.')[0]! : hostname
+}
+export const APP_DESCRIPTION = 'What I am listening to'
+
 export function setupPage(redirectUri: string, error?: string): Page {
   return {
     title: 'Set up',
@@ -133,8 +145,8 @@ ${error ? notice('bad', escapeHtml(error)) : ''}
   <h2>1. Create a Spotify app</h2>
   <p><a class="button" href="https://developer.spotify.com/dashboard/create" target="_blank" rel="noopener noreferrer">Open Spotify's form</a></p>
   <ol class="fields">
-    <li><b>App name</b>${copyable('spotify-azuracast')}</li>
-    <li><b>App description</b>${copyable('What I play on Spotify, as an AzuraCast now playing API')}</li>
+    <li><b>App name</b>${copyable(appName(redirectUri))}</li>
+    <li><b>App description</b>${copyable(APP_DESCRIPTION)}</li>
     <li><b>Redirect URI</b>: paste this, then click Add.${copyable(redirectUri)}</li>
     <li><b>Which API/SDKs are you planning to use?</b> Tick <b>Web API</b>, accept the terms and save.</li>
   </ol>

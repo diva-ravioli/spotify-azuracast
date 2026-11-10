@@ -15,7 +15,7 @@
 
   <form id="install" autocomplete="off">
     <h2>1. Make a Cloudflare API token</h2>
-    <p>On <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener noreferrer">Cloudflare's API tokens page</a>, choose <b>Create Token</b>, then <b>Create Custom Token</b>. Give it one permission, <b>Account</b> › <b>Workers Scripts</b> › <b>Edit</b>, and copy the token it shows you.</p>
+    <p>On <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener noreferrer">Cloudflare's API tokens page</a>, choose <b>Create Token</b>. Name it so you'll know later what it is for, such as <b>spotify-azuracast</b>: deleting it would stop your copy's updates. Then choose <b>Start from scratch</b> › <b>Start with an Account policy</b>. Search for <b>Workers Scripts</b> and tick <b>Edit</b>: that is the only permission it needs. Leave it on <b>No expiration</b>, so your copy can keep updating itself, then choose <b>Continue to summary</b> and <b>Create Token</b>, and copy the token it shows you.</p>
     <label for="token">API token</label>
     <input type="password" id="token" required spellcheck="false" autocomplete="off">
 
@@ -25,8 +25,9 @@
     <input type="text" id="account" required spellcheck="false" autocomplete="off">
 
     <h2>3. Install</h2>
+    <p>The Worker's name becomes part of your copy's address, which Spotify sees when you connect it, so this one is made up and says nothing about what it is. Keep it, or choose your own without <i>spotify</i> or <i>azuracast</i> in it.</p>
     <label for="name">Worker name</label>
-    <input type="text" id="name" required spellcheck="false" autocomplete="off" value="spotify-azuracast">
+    <input type="text" id="name" required spellcheck="false" autocomplete="off">
     <button>Install</button>
   </form>
 

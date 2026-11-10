@@ -16,6 +16,19 @@ export class InstallError extends Error {}
 export const validName = (name) => /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/.test(name)
 export const validAccount = (id) => /^[0-9a-f]{32}$/.test(id)
 
+const ADJECTIVES = ['amber', 'brisk', 'calm', 'clever', 'quiet', 'dusty', 'gentle', 'golden', 'hidden', 'humble', 'lively', 'lucky', 'mellow', 'misty', 'nimble', 'olive', 'plain', 'rapid', 'rusty', 'silent', 'sunny', 'tidy', 'velvet', 'windy']
+const NOUNS = ['badger', 'birch', 'canyon', 'cedar', 'comet', 'delta', 'falcon', 'fern', 'harbor', 'heron', 'island', 'lagoon', 'maple', 'meadow', 'otter', 'pebble', 'pine', 'prairie', 'raven', 'ridge', 'river', 'summit', 'thistle', 'willow']
+
+/**
+ * A Worker name that says nothing about what it is. It ends up in the address
+ * Spotify is given, and the name of the app there, so a shared default would
+ * let Spotify count everyone who uses this.
+ */
+export function suggestName() {
+  const [a, b, c] = crypto.getRandomValues(new Uint16Array(3))
+  return `${ADJECTIVES[a % ADJECTIVES.length]}-${NOUNS[b % NOUNS.length]}-${c.toString(16).padStart(4, '0')}`
+}
+
 const permissionHint = 'Check the Account ID, and that the token has Workers Scripts: Edit.'
 
 /** Answers the new Worker's address. Safe to run again: it picks up where it failed. */
