@@ -36,6 +36,6 @@ jobs:
       - run: gh release create "$GITHUB_REF_NAME" --generate-notes --verify-tag dist/worker.js dist/worker.json
         env:
           GH_TOKEN: ${{ github.token }}
-      - run: gh workflow run pages.yml --ref main
+      - run: gh workflow run pages.yml --ref main -f tag="$GITHUB_REF_NAME"
         env:
           GH_TOKEN: ${{ github.token }}
