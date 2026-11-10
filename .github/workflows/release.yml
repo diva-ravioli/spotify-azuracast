@@ -1,0 +1,41 @@
+# Push a tag like v1.2.3, having bumped src/version.ts, package.json and
+# CHANGELOG.md. Everything is checked first. Creating the GitHub Release comes
+# last, because it is what deployed copies install: if anything fails, nothing
+# reaches them. Only the install page is refreshed after it.
+name: Release
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+permissions:
+  contents: write
+  actions: write
+
+jobs:
+  release:
+    if: github.repository == 'diva-ravioli/spotify-azuracast'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - run: npm run test:worker
+      - name: The tag, package.json and src/version.ts agree
+        run: |
+          tag="${GITHUB_REF_NAME#v}"
+          test "$tag" = "$(node -p "require('./package.json').version")"
+          grep -q "VERSION = '$tag'" src/version.ts
+      - run: npm run build
+      - run: gh release create "$GITHUB_REF_NAME" --generate-notes --verify-tag dist/worker.js dist/worker.json
+        env:
+          GH_TOKEN: ${{ github.token }}
+      - run: gh workflow run pages.yml --ref main
+        env:
+          GH_TOKEN: ${{ github.token }}

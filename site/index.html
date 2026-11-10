@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; img-src data:; connect-src 'self' https://spotify-azuracast-relay.diva-ravioli.workers.dev; base-uri 'none'; form-action 'none'">
+  <title>Install spotify-azuracast</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <h1>Install spotify-azuracast</h1>
+  <p>This puts your own copy on your free Cloudflare account. You don't need a GitHub account or anything installed.</p>
+
+  <form id="install" autocomplete="off">
+    <h2>1. Make a Cloudflare API token</h2>
+    <p>On <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank" rel="noopener noreferrer">Cloudflare's API tokens page</a>, choose <b>Create Token</b>, then <b>Create Custom Token</b>. Give it one permission, <b>Account</b> › <b>Workers Scripts</b> › <b>Edit</b>, and copy the token it shows you.</p>
+    <label for="token">API token</label>
+    <input type="password" id="token" required spellcheck="false" autocomplete="off">
+
+    <h2>2. Find your Account ID</h2>
+    <p>It's in the address of your <a href="https://dash.cloudflare.com" target="_blank" rel="noopener noreferrer">Cloudflare dashboard</a>: <code>dash.cloudflare.com/<b>your-account-id</b>/…</code></p>
+    <label for="account">Account ID</label>
+    <input type="text" id="account" required spellcheck="false" autocomplete="off">
+
+    <h2>3. Install</h2>
+    <label for="name">Worker name</label>
+    <input type="text" id="name" required spellcheck="false" autocomplete="off" value="spotify-azuracast">
+    <button>Install</button>
+  </form>
+
+  <ol id="progress" hidden></ol>
+  <p id="problem" role="alert" hidden></p>
+  <section id="done" hidden>
+    <h2>Installed</h2>
+    <p><b>Open it straight away:</b> <a></a></p>
+    <p>The first Spotify account to complete setup becomes its owner. The page takes you through the rest.</p>
+  </section>
+
+  <h2>What happens to your token</h2>
+  <p>It's kept as an encrypted secret in your own Worker, and used only to install new releases once a day. It passes through <a href="https://github.com/diva-ravioli/spotify-azuracast/blob/main/relay/worker.ts" target="_blank" rel="noopener noreferrer">a small relay</a> on its way to Cloudflare, because a web page can't call Cloudflare's API directly. The relay keeps and logs nothing, and passes on only what this page asks. The token can change any Worker on your account. To stop updates, delete it on Cloudflare's API tokens page.</p>
+</main>
+<script type="module" src="page.js"></script>
+</body>
+</html>

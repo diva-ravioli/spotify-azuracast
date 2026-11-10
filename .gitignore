@@ -1,0 +1,8 @@
+node_modules/
+.wrangler/
+# What a release publishes: scripts/build-release.mjs makes it.
+dist/
+.dev.vars
+.env
+# AzuraCast's API description, fetched at the pinned commit for the format tests.
+.azuracast/

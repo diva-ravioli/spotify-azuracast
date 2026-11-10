@@ -1,0 +1,30 @@
+{
+  "name": "spotify-azuracast",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A self-hosted adapter that publishes what you play on Spotify, and your queue, in the API format AzuraCast stations use.",
+  "license": "0BSD",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "node scripts/build-release.mjs",
+    "check": "tsc --noEmit",
+    "pretest": "node scripts/fetch-azuracast.mjs",
+    "test": "node --test \"test/**/*.test.ts\"",
+    "test:worker": "node test/worker/run.ts",
+    "test:browser": "node test/browser/run.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "playwright": "^1.65.0",
+    "typescript": "^7.0.2",
+    "wrangler": "^4.158.0",
+    "yaml": "^2.9.1"
+  }
+}
