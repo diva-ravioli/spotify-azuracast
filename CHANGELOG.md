@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.1.4
 
 Updates work. Copies asked GitHub's API for the newest release, which can turn away requests from Cloudflare Workers, and did for the first copies, so they couldn't update themselves or see a new version. They now ask github.com, which doesn't. Copies on an earlier version can't update themselves to this one: install again from the install page, with the same Worker name, to keep everything as it is.
 
